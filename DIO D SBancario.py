@@ -45,15 +45,6 @@ class PessoaFisica(Cliente):
     def novo_cliente(cls, cpf, nome, data_nascimento, endereco):
         return cls(cpf, nome, data_nascimento, endereco)
 
-    
-# ====== Cria um cliente de teste ====== #
-
-cliente = PessoaFisica(cpf="000.000.000-00", nome="None", data_nascimento="00/00/0000", endereco="Rua A, NºB, Bairro C")
-usuarios.append(cliente)
-print(f"[Cliente: {cliente.nome} - CPF:{cliente.cpf} - Data de nascimento: {cliente.data_nascimento} - Endereço: {cliente.endereco}]")
-
-# ====================================== #
-
 # ========================================================  Fim Cliente  =======================================================#
 
 # =======================================================  Inicio Classe Conta  =======================================================#
@@ -128,21 +119,6 @@ class Historico:
     
     def adicionar_transacao(self, transacao):
         self._transacoes.append({"tipo": transacao.__name__, "valor": transacao.valor})
-
-# ======= Cria uma conta de teste ======= #
-
-conta = ContaCorrente(0, cliente)
-cliente.contas.append(conta)
-todas_contas.append(conta)
-print(f"[Cliente: {conta.cliente.nome} - Agencia: {conta.agencia} - Conta: {conta.numero} - Saldo: {cliente.contas[0].saldo:.2f} - Limite: {cliente.contas[0].limite:.2f}] - Saques realizados: {cliente.contas[0].numero_saques}]")
-
-conta = ContaCorrente(1, cliente)
-cliente.contas.append(conta)
-todas_contas.append(conta)
-print(f"[Cliente: {conta.cliente.nome} - Agencia: {conta.agencia} - Conta: {conta.numero} - Saldo: {cliente.contas[1].saldo:.2f} - Limite: {cliente.contas[1].limite:.2f}] - Saques realizados: {cliente.contas[1].numero_saques}]")
-
-print(f"[Contas: {cliente.contas}]")
-# ======================================= #
 
 # =========================================================  Fim Conta  ========================================================#
 
