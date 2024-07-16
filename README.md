@@ -1,4 +1,4 @@
-# Segunda parte do desafio (POO)
+# Terceiroa parte do desafio (POO)
 
 Aqui estou adicionando um sistema de Programação orientada a objetos (POO) ao código feito anteriormente, se quiser ver as outras partes do desafio cada parte esta em uma branch diferente.
 
