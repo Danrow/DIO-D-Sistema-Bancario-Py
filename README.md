@@ -1,9 +1,19 @@
-# Terceira parte do desafio (POO)
-
-Aqui estou adicionando um sistema de Programação orientada a objetos (POO) ao código feito anteriormente, se quiser ver as outras partes do desafio cada parte esta em uma branch diferente.
-
-Estou usando a imagem dada para o desafio:
-\
-![Logo da Minha Empresa](https://github.com/Danrow/DIO-D-Sistema-Bancario-Py/blob/02-Modelando-o-Sistema-Banc%C3%A1rio-em-POO-com-Python/Modelando%20o%20sistema%20Banc%C3%A1rio%20em%20POO%20com%20Python.png?raw=true)
-
+# Quarta parte do desafio (Decoradores, Iteradores e Geradores)
 Respondendo ao desafio da Dio ([Digital Innovation One](https://www.dio.me/)).
+
+Sobre o desafio:
+\
+Implementar as seguintes funcionalidades no sistema:
+
+- Decorador de log
+- Gerador de relatórios
+- Iterador personalizado
+
+## Decorador de log
+Implementar um decorador que seja aplicado a todas as funções de transações (depósito, saque, criação de conta, etc). Esse decorador deve registrar (printar) a data e hora de cada transação, bem como o tipo de transação.
+
+## Gerador de relatórios
+Crie um gerador que permita iterar sobre as transações de uma conta e retorne, uma a uma, as transações que foram realizadas. Esse gerador deve também ter uma forma de filtrar as transações baseado em seu tipo (por exemplo, apenas saques ou apenas depósitos).
+
+## Iterador personalizado
+Implemente um iterador personalizado ContaIterador que permita iterar sobre todas as contas do banco, retornando informações básicas de cada conta (número, saldo atual, etc).
