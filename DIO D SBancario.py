@@ -157,7 +157,7 @@ class Saque(Transacao):
         return self._valor
 
     def registrar(self, conta):
-        if self.valor > 0 and self.valor < conta.saldo:
+        if self.valor > 0 and self.valor <= conta.saldo:
             conta.saldo = -self.valor
             conta.numero_saques = 1
             conta.historico.adicionar_transacao(self)
@@ -432,7 +432,7 @@ def menu_conta(conta):
                         input("\nPressione <Enter> para continuar.")
                         break
 
-                    elif resposta >= conta.saldo:
+                    elif resposta > conta.saldo:
                         mensagem_Saldo_insuficiente()
                         break
 
