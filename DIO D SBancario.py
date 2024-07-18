@@ -1,8 +1,33 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 import re
 
 # ==========================================================  Inicio Cliente  ========================================================= #
 usuarios = []
+
+class ContasIterador:
+    def __init__(self):
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if len(todas_contas) > self.index:
+            conta = todas_contas[self.index]
+            self.index += 1
+            return f"""\
+Cliente: {conta.cliente.nome}
+CPF:     {conta.cliente.cpf}
+Agencia: {conta.agencia} Conta: {conta.numero}
+Saldo: R$ {conta.saldo:.2f}
+Limite: R$ {conta.limite:.2f}
+Saques realizados: {conta.numero_saques}
+---------------------------------------------------\
+"""
+        else:
+            self.index = 0
+            raise StopIteration
 
 class Cliente:
     def __init__(self, endereco):
@@ -119,7 +144,15 @@ class Historico:
         return self._transacoes
     
     def adicionar_transacao(self, transacao):
-        self._transacoes.append({"tipo": transacao.__name__, "valor": transacao.valor})
+        self.transacoes.append({"tipo": transacao.__name__, "valor": transacao.valor, "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S")})
+
+    def gerar_relatorio(self, tipo_transacao):
+        for transacao in self.transacoes:
+            if  tipo_transacao == None:
+                yield transacao
+
+            elif tipo_transacao.__name__ == transacao["tipo"]:
+                yield transacao
 
 # =========================================================  Inicio Transação  ======================================================== #
 
@@ -168,7 +201,22 @@ def mostrar_menu_inicial():
     opcao = input("""
 ---------------------------------------------------
 Digite o numero do seu CPF ou conta para entrar.
-[c] Cadastra Usuário        [l] Listar Usuário
+[c] Cadastra Usuário        [o] Opções de ADM
+
+
+[q] Sair
+---------------------------------------------------
+→ """)
+    return opcao
+
+def mostrar_menu_adm():
+    print(f"""
+---------------------------------------------------
+Nº de Usuários: {len(usuarios)}""", end="")
+    for x in range(12-len(str(len(usuarios)))):
+        print(" ", end="")
+    opcao = input(f"""Nº de contas: {len(todas_contas)}
+[u] Listar todos Usuários   [c] Listar todas contas
 
 
 [q] Sair
@@ -197,6 +245,8 @@ Bem vindo(a), {conta.cliente.nome.split(" ")[0]}!
 Saldo Atual: R$ {conta.saldo:.2f}
 
 [s] Sacar                   [d] Depositar
+
+[p] Extrato personalizado
 [e] Extrato
 
 [q] Sair da conta
@@ -204,6 +254,33 @@ Saldo Atual: R$ {conta.saldo:.2f}
 → """)
     
     return opcao
+
+def mostrar_menu_extrato(conta):
+    opcao = input(f"""
+Bem vindo(a), {conta.cliente.nome.split(" ")[0]}!
+---------------------------------------------------
+Saldo Atual: R$ {conta.saldo:.2f}
+[s] Somente Saques          [d] Somente Depositos
+[t] Todas Transações
+
+
+[q] voltar
+---------------------------------------------------
+→ """)
+    
+    return opcao
+
+def log_transacao(funcao):
+    def envelope(*args, **kwargs):
+        resultado = funcao(*args, **kwargs)
+        print(f"\n{re.sub("_"," ",funcao.__name__.upper())}", end="")
+        for x in range(32-len(funcao.__name__)):
+            print(" ", end="")
+        print(f"{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}")
+        print("".center(51, "="))  
+        input("\nPressione <Enter> para continuar.")
+        return resultado
+    return envelope
 
 def validar_cpf(cpf):
     pattern_cpf = "[0-9]{3}[.][0-9]{3}[.][0-9]{3}[-][0-9]{2}"
@@ -213,18 +290,90 @@ def validar_cpf(cpf):
     else:
         return False
 
-def mensagem_valor_invalido():
-    print("\n"+"".center(50, "="))
-    print("Valor invalido!".center(51, " "))
-    print("".center(51, "="))
-    input("\nPressione <Enter> para continuar.")
+# ============================ funções com decorador de Log =========================== #
 
-def mensagem_Saldo_insuficiente():
-    print("\n"+"".center(50, "="))
-    print("Saldo insuficiente!".center(51, " "))
-    print("".center(51, "="))  
-    input("\nPressione <Enter> para continuar.")  
+@log_transacao
+def extrato(conta, tipo_transacao):
+    print(" Extrato ".center(51, "="))
+    print(f"Cliente: {conta.cliente.nome}")
+    print(f"Agência: {conta.agencia} Conta:{conta.numero}")
+    print("".center(51, "-"))
+    for transacao in conta.historico.gerar_relatorio(tipo_transacao):
+        print(f"{transacao["tipo"]}:", end="")
+        for espaco in range(12-len(f"{transacao["tipo"]}")):
+            print(" ", end="")
+        print(f"R$ {transacao["valor"]:.2f}", end="")
+        for espaco in range(19-len(str(f"R$ {transacao["valor"]:.2f}"))):
+            print(" ", end="")
+        print(f"{transacao["data"]}")
 
+    print(f"\nSaldo Atual: R$ {conta.saldo:.2f}\n")
+
+@log_transacao
+def deposito(conta):
+    while True:
+
+        try:
+            resposta = float(input("\nInforme o valor do depósito:\nR$ "))
+            if resposta > 0:
+                Deposito.valor = resposta
+                Deposito.registrar(Deposito, conta)
+                print("\n"+"".center(51, "="))
+                print(" Deposito realizado com sucesso! ".center(51, " "))
+                print(f" Valor: R$ {Deposito.valor:.2f} ".center(51, " "))
+                break
+
+            else:
+                print("\n"+"".center(50, "="))
+                print("Valor invalido!".center(51, " "))
+                break
+                    
+        except ValueError:
+            print("\n"+" Erro! ".center(50, "="))
+            print("Valor invalido!".center(51, " "))
+            break
+
+@log_transacao
+def saque(conta):
+    while True:
+
+        try:
+            resposta = float(input("\nInforme o valor do saque:\nR$ "))
+            if conta.numero_saques >= conta.limite_saques:
+                print("\n"+" Sague falhou! ".center(51, "="))
+                print("Limite de saques alcançado.".center(51, " "))
+                break
+
+            elif resposta > conta.limite:
+                print("\n"+" Sague falhou! ".center(51, "="))
+                print(f"Valor maior que o limite da conta.".center(51, " "))
+                print(f"Seu limite é de R$ {conta.limite:.2f}".center(51, " "))
+                break
+
+            elif resposta > conta.saldo:
+                print("\n"+"".center(50, "="))
+                print("Saldo insuficiente!".center(51, " "))
+                break
+
+            elif resposta > 0:
+                Saque.valor = resposta
+                Saque.registrar(Saque, conta)
+                print("\n"+"".center(51, "="))
+                print(" Sague realizado com sucesso! ".center(51, " "))
+                print(f" Valor: R$ {Saque.valor:.2f} ".center(51, " "))
+                break
+
+            else:
+                print("\n"+"".center(50, "="))
+                print("Valor invalido!".center(51, " "))
+                break
+                    
+        except ValueError:
+            print("\n"+" Erro! ".center(50, "="))
+            print("Valor invalido!".center(51, " "))
+            break
+
+@log_transacao
 def cadastrar_usuario():
     cpf_encontrado = False
 
@@ -242,11 +391,8 @@ def cadastrar_usuario():
                     cpf_encontrado = False
 
             if cpf_encontrado == True:
-                print("\n"+"".center(50, "="))
-                print(" Cadastro falhou! ".center(51," "))
+                print("\n"+" Erro! ".center(51, "="))
                 print(" CPF já Cadastrado. ".center(51," "))
-                print("".center(51, "="))
-                input("\nPressione <Enter> para continuar.")
                 break
 
             else:
@@ -303,11 +449,11 @@ def cadastrar_usuario():
                 usuarios.append(usuario)
                 print("\n"+"".center(51, "="))
                 print("Usuário Cadastrado com sucesso!".center(51, " "))
-                print("".center(51, "="))
-                input("\nPressione <Enter> para continuar.")
                 break
         # Cancelar.
         elif cpf == "q": 
+            print("\n"+"".center(51, "="))
+            print("Cadastrado cancelado".center(51, " "))
             break
         
         # Opção CPF em formato inválido.
@@ -317,6 +463,7 @@ def cadastrar_usuario():
             print("".center(51,"="))
             input("\nPressione <Enter> para continuar.")
 
+@log_transacao
 def cadastrar_conta(cliente):
     print("def cadastrar_conta")
     conta = ContaCorrente.nova_conta(numero=int(len(todas_contas)), cliente=cliente)
@@ -325,36 +472,77 @@ def cadastrar_conta(cliente):
     todas_contas.append(conta)
     print("\n"+" Sucesso! ".center(51,"=")+"\n"+" Conta foi Cadastrada. ".center(51," "))
     print(f" Agencia: {conta.agencia}   Conta: {conta.numero} ".center(51," "))
-    print("".center(51,"="))
-    input("\nPressione <Enter> para continuar.")
 
+@log_transacao
 def listar_usuarios():
     if len(usuarios) == 0:
         print("\n"+"".center(51, "="))
         print("Nenhum usuário encontrado!".center(51, " "))
-        print("".center(51, "="))
-        input("\nPressione <Enter> para continuar.")
 
     else:
-        print()
+        print(" Clientes ".center(51,"=")+"\n"+"".center(51,"-"))
         for cliente in usuarios:
-            print(f"[Cliente: {cliente.nome} - CPF:{cliente.cpf} - Data de nascimento: {cliente.data_nascimento} - Endereço: {cliente.endereco}]")
+            print(f"Cliente: {cliente.nome}")
+            print(f"CPF:{cliente.cpf}")
+            print(f"Data de nascimento: {cliente.data_nascimento}")
+            print(f"Endereço: {cliente.endereco}")
+            print("".center(51,"-"))
         print("\n",len(usuarios)," usuário encontrado."if(len(usuarios)== 1)else" usuários encontrados.", sep="")
-        input("\nPressione <Enter> para continuar.")
 
+@log_transacao
+def listar_todas_contas(todas_contas):
+    if len(todas_contas) == 0:
+        print("\n"+"".center(51, "="))
+        print("Nenhuma conta encontrada!".center(51, " "))
+
+    else:
+        print(" Contas ".center(51,"=")+"\n"+"".center(51,"-"))
+        for conta in ContasIterador():
+            print(conta)
+        print("\n",len(todas_contas)," conta encontrada."if(len(todas_contas)== 1)else" contas encontradas.", sep="")
+
+@log_transacao
 def listar_contas(cliente):
     if len(cliente.contas) == 0:
         print("\n"+"".center(51, "="))
         print("Nenhuma conta encontrada!".center(51, " "))
-        print("".center(51, "="))
-        input("\nPressione <Enter> para continuar.")
 
     else:
-        print()
+        print(" Contas ".center(51,"=")+"\n"+"".center(51,"-"))
         for x, conta in enumerate(cliente.contas):
-            print(f"[Cliente: {conta.cliente.nome} - Agencia: {conta.agencia} - Conta: {conta.numero} - Saldo: R$ {cliente.contas[x].saldo:.2f} - Limite: R$ {cliente.contas[x].limite:.2f} - Saques realizados: {cliente.contas[x].numero_saques}]")
+            print(f"Cliente: {conta.cliente.nome}")
+            print(f"Agencia: {conta.agencia} Conta: {conta.numero}")
+            print(f"Saldo: R$ {cliente.contas[x].saldo:.2f}")
+            print(f"Limite: R$ {cliente.contas[x].limite:.2f}")
+            print(f"Saques realizados: {cliente.contas[x].numero_saques}")
+            print("".center(51,"-"))
         print("\n",len(cliente.contas)," conta encontrada."if(len(cliente.contas)== 1)else" contas encontradas.", sep="")
-        input("\nPressione <Enter> para continuar.")
+
+# ==================================== Fim de Logs ==================================== #
+
+def menu_extrato(conta):
+    while True:
+        opcao = mostrar_menu_extrato(conta)
+
+        # Exibi Saques
+        if opcao == "s":
+            extrato(conta, Saque)
+            opcao = None 
+
+        # Exibi Depositos
+        elif opcao == "d":
+            extrato(conta, Deposito)
+            opcao = None 
+
+        # Exibi todas transações
+        elif opcao == "t":
+            extrato(conta, None)
+            opcao = None 
+
+        # Sair.
+        elif opcao == "q":
+            opcao = None
+            break
 
 def menu_cliente(cliente):
     while True:
@@ -389,84 +577,45 @@ def menu_conta(conta):
 
         # Depósito.
         if opcao == "d":
-            while True:
-
-                try:
-                    resposta = float(input("\nInforme o valor do depósito:\nR$ "))
-                    if resposta > 0:
-                        Deposito.valor = resposta
-                        Deposito.registrar(Deposito, conta)
-                        print("\n"+"".center(51, "="))
-                        print(" Deposito realizado com sucesso! ".center(51, " "))
-                        print("".center(51, "="))
-                        input("\nPressione <Enter> para continuar.")
-                        break
-                    else:
-                        mensagem_valor_invalido()
-                        break
-                    
-                except ValueError:
-                    mensagem_valor_invalido()
-                    break
-            
+            deposito(conta)
             opcao = None
 
         # Saque.
         elif opcao == "s":
-            while True:
+            saque(conta)
+            opcao = None
 
-                try:
-                    resposta = float(input("\nInforme o valor do saque:\nR$ "))
-                    if conta.numero_saques >= conta.limite_saques:
-                        print("\n"+" Sague falhou! ".center(51, "="))
-                        print("Limite de saques alcançado.".center(51, " "))
-                        print("".center(51, "="))
-                        input("\nPressione <Enter> para continuar.")
-                        break
-
-                    elif resposta > conta.limite:
-                        print("\n"+" Sague falhou! ".center(51, "="))
-                        print(f"Valor maior que o limite da conta.".center(51, " "))
-                        print(f"Seu limite é R$ {conta.limite:.2f}".center(51, " "))
-                        print("".center(51, "="))
-                        input("\nPressione <Enter> para continuar.")
-                        break
-
-                    elif resposta > conta.saldo:
-                        mensagem_Saldo_insuficiente()
-                        break
-
-                    elif resposta > 0:
-                        Saque.valor = resposta
-                        Saque.registrar(Saque, conta)
-                        print("\n"+"".center(51, "="))
-                        print(" Sague realizado com sucesso! ".center(51, " "))
-                        print("".center(51, "="))
-                        input("\nPressione <Enter> para continuar.")
-                        break
-
-                    else:
-                        mensagem_valor_invalido()
-                        break
-                    
-                except ValueError:
-                    mensagem_valor_invalido()
-                    break
-            
+        # Extrato personalizado.
+        elif opcao == "p":
+            menu_extrato(conta)
             opcao = None
 
         # Extrato.
         elif opcao == "e":
-            print(" Extrato ".center(51, "="))
-            for transacao in conta.historico.transacoes:
-                print(f"{transacao["tipo"]}: R$ {transacao["valor"]:.2f}")
-            print(f"\nSaldo Atual: R$ {conta.saldo:.2f}\n"+"".center(51, "="))
-            input("\nPressione <Enter> para continuar.")
+            extrato(conta, None)
             opcao = None
 
         # Sair.
         elif opcao == "q":
             opcao = None
+            break
+
+def menu_adm():
+    while True:
+        opcao = mostrar_menu_adm()
+
+        # Listar todas contas.
+        if opcao == "c":
+            listar_todas_contas(todas_contas)
+            opcao = None
+
+        # Listar usuários.
+        if opcao == "u":
+            listar_usuarios()
+            opcao = None
+        
+        # Sair.
+        elif opcao == "q":
             break
 
 def main():
@@ -479,9 +628,9 @@ def main():
             cadastrar_usuario()
             opcao = None
 
-        # listar usuarios.
-        elif opcao == "l":
-            listar_usuarios()
+        # Menu adm.
+        elif opcao == "o":
+            menu_adm()
             opcao = None
 
         # Sair.
@@ -497,6 +646,7 @@ def main():
                         menu_cliente(cliente)
                         opcao = None
                         break
+
                 if opcao != None:
                     print("\n"+" CPF não cadastrado! ".center(51, "="))
                     print("Cadastre um usuário um novo.".center(51, " "))
@@ -513,7 +663,8 @@ def main():
                 
                 # Opção Invalida.
                 if opcao != None:
-                    mensagem_valor_invalido()
+                    print("\n"+"".center(50, "="))
+                    print("Valor invalido!".center(51, " "))
                     opcao = None
 
 main()
